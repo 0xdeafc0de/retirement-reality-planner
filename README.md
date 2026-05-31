@@ -182,8 +182,8 @@ advice.
 Legacy scripts are still available:
 
 ```bash
-python3 fvm.py
-python3 corpus_runtime.py
+python3 tools/fvm.py
+python3 tools/corpus_runtime.py
 ```
 
 ## Disclaimer
