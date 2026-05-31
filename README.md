@@ -189,6 +189,8 @@ python3 tools/fvm.py
 python3 tools/corpus_runtime.py
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
 ## Disclaimer
 
 This project is for education and planning exploration. It is not investment,
