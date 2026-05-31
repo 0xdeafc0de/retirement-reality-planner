@@ -1,7 +1,7 @@
 [project]
-name = "financial-calculators"
+name = "retirement-reality-planner"
 version = "0.1.0"
-description = "Personal finance calculators and retirement planning simulations."
+description = "Retirement planning simulator with inflation-aware corpus longevity and Monte Carlo risk analysis."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
@@ -20,4 +20,3 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

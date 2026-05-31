@@ -1,7 +1,7 @@
 # Retirement Reality Planner
 
-Personal finance calculators and retirement planning simulations that avoid
-overly smooth, rosy projections.
+Retirement planning simulator with inflation-aware corpus longevity and Monte
+Carlo risk analysis that avoids overly smooth, rosy projections.
 
 Most simple retirement spreadsheets assume one fixed return and one fixed
 inflation rate. That is useful for a quick estimate, but real retirement
@@ -240,15 +240,18 @@ advice.
 
 ## Development
 
+The installable distribution is named `retirement-reality-planner`. The Python
+import package is still `financial_calculators`.
+
 ```bash
 .venv/bin/pytest -q
 ```
 
-Legacy scripts are still available:
+Legacy interactive calculator scripts live in `tools/`:
 
 ```bash
-python3 fvm.py
-python3 corpus_runtime.py
+python3 tools/fvm.py
+python3 tools/corpus_runtime.py
 ```
 
 ## Disclaimer
