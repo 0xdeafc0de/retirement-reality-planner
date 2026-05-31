@@ -3,11 +3,15 @@
 from argparse import ArgumentParser, Namespace
 
 from financial_calculators.corpus import simulate_corpus_longevity
+from financial_calculators.historical_data import load_historical_years
 from financial_calculators.inflation import (
     adjusted_value_after_inflation,
     future_cost_after_inflation,
 )
-from financial_calculators.retirement import simulate_monte_carlo_retirement
+from financial_calculators.retirement import (
+    simulate_historical_replay,
+    simulate_monte_carlo_retirement,
+)
 
 
 def _money(value: float, currency: str) -> str:
@@ -31,10 +35,15 @@ def _add_corpus_command(parser: ArgumentParser) -> None:
 
 
 def _add_retire_command(parser: ArgumentParser) -> None:
-    parser.add_argument("--mode", choices=["monte-carlo"], default="monte-carlo")
+    parser.add_argument(
+        "--mode",
+        choices=["monte-carlo", "historical"],
+        default="monte-carlo",
+    )
     parser.add_argument("--corpus", type=float, default=20_000_000)
     parser.add_argument("--annual-expense", type=float, default=1_200_000)
     parser.add_argument("--years", type=int, default=35)
+    parser.add_argument("--history-csv")
     parser.add_argument("--simulations", type=int, default=10_000)
     parser.add_argument("--return-mean", type=float, default=8)
     parser.add_argument("--return-volatility", type=float, default=15)
@@ -95,6 +104,12 @@ def run_corpus(args: Namespace) -> int:
 
 
 def run_retire(args: Namespace) -> int:
+    if args.mode == "historical":
+        return run_historical_replay(args)
+    return run_monte_carlo(args)
+
+
+def run_monte_carlo(args: Namespace) -> int:
     summary = simulate_monte_carlo_retirement(
         initial_corpus=args.corpus,
         annual_expense=args.annual_expense,
@@ -121,6 +136,38 @@ def run_retire(args: Namespace) -> int:
     print(f"90th percentile ending corpus: {_money(summary.ending_corpus_p90, args.currency)}")
     if summary.earliest_failure_year is None:
         print("No simulated path exhausted the corpus.")
+    else:
+        print(f"Earliest failure year: {summary.earliest_failure_year}")
+        print(f"Median failure year: {summary.median_failure_year:g}")
+    return 0
+
+
+def run_historical_replay(args: Namespace) -> int:
+    if args.history_csv is None:
+        raise SystemExit("--history-csv is required when --mode historical")
+
+    history = load_historical_years(args.history_csv)
+    summary = simulate_historical_replay(
+        initial_corpus=args.corpus,
+        annual_expense=args.annual_expense,
+        years=args.years,
+        historical_years=history,
+    )
+
+    print("Historical retirement replay")
+    print(f"Periods tested: {summary.periods:,}")
+    print(f"Horizon: {summary.horizon_years} years")
+    print(f"Initial corpus: {_money(args.corpus, args.currency)}")
+    print(f"Annual expense: {_money(args.annual_expense, args.currency)}")
+    print(f"Success rate: {summary.success_rate * 100:.1f}%")
+    print(f"Worst start year: {summary.worst_start_year}")
+    print(f"Worst ending corpus: {_money(summary.worst_ending_corpus, args.currency)}")
+    print(f"Median ending corpus: {_money(summary.median_ending_corpus, args.currency)}")
+    print(f"5th percentile ending corpus: {_money(summary.ending_corpus_p5, args.currency)}")
+    print(f"10th percentile ending corpus: {_money(summary.ending_corpus_p10, args.currency)}")
+    print(f"90th percentile ending corpus: {_money(summary.ending_corpus_p90, args.currency)}")
+    if summary.earliest_failure_year is None:
+        print("No historical period exhausted the corpus.")
     else:
         print(f"Earliest failure year: {summary.earliest_failure_year}")
         print(f"Median failure year: {summary.median_failure_year:g}")
