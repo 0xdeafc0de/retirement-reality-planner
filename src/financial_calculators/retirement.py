@@ -12,6 +12,8 @@ class RetirementPath:
     ending_corpus: float
     years_survived: int
     exhausted: bool
+    start_year: int | None = None
+    end_year: int | None = None
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,24 @@ class MonteCarloRetirementSummary:
     ending_corpus_p90: float
     earliest_failure_year: int | None
     median_failure_year: float | None
+    paths: tuple[RetirementPath, ...]
+
+
+@dataclass(frozen=True)
+class HistoricalReplaySummary:
+    """Summary statistics for historical retirement replay."""
+
+    periods: int
+    horizon_years: int
+    success_rate: float
+    median_ending_corpus: float
+    ending_corpus_p5: float
+    ending_corpus_p10: float
+    ending_corpus_p90: float
+    earliest_failure_year: int | None
+    median_failure_year: float | None
+    worst_start_year: int
+    worst_ending_corpus: float
     paths: tuple[RetirementPath, ...]
 
 
@@ -151,3 +171,80 @@ def simulate_monte_carlo_retirement(
         paths=tuple(paths),
     )
 
+
+def simulate_historical_replay(
+    initial_corpus: float,
+    annual_expense: float,
+    years: int,
+    historical_years,
+) -> HistoricalReplaySummary:
+    """Replay retirement against every valid rolling historical period.
+
+    historical_years must contain objects with year, return_rate, and
+    inflation_rate attributes. Rates should be decimals, so 8% is 0.08.
+    """
+    if initial_corpus < 0:
+        raise ValueError("initial_corpus must be non-negative")
+    if annual_expense < 0:
+        raise ValueError("annual_expense must be non-negative")
+    if years <= 0:
+        raise ValueError("years must be positive")
+
+    ordered_years = tuple(sorted(historical_years, key=lambda item: item.year))
+    if len(ordered_years) < years:
+        raise ValueError("historical_years must contain at least years rows")
+
+    paths: list[RetirementPath] = []
+    for start_index in range(0, len(ordered_years) - years + 1):
+        period = ordered_years[start_index : start_index + years]
+        corpus = float(initial_corpus)
+        expense = float(annual_expense)
+        years_survived = 0
+        exhausted = False
+
+        for index, item in enumerate(period, start=1):
+            _validate_rate("return_rate", item.return_rate)
+            _validate_rate("inflation_rate", item.inflation_rate)
+
+            corpus -= expense
+            if corpus < 0:
+                years_survived = index - 1
+                exhausted = True
+                break
+
+            corpus *= 1 + item.return_rate
+            expense *= 1 + item.inflation_rate
+            years_survived = index
+
+        paths.append(
+            RetirementPath(
+                ending_corpus=corpus,
+                years_survived=years_survived,
+                exhausted=exhausted,
+                start_year=period[0].year,
+                end_year=period[-1].year,
+            )
+        )
+
+    ending_values = [path.ending_corpus for path in paths]
+    failures = [path.years_survived + 1 for path in paths if path.exhausted]
+    successes = len(paths) - len(failures)
+    worst_path = min(paths, key=lambda path: path.ending_corpus)
+    worst_start_year = worst_path.start_year
+    if worst_start_year is None:
+        raise RuntimeError("historical replay path is missing a start year")
+
+    return HistoricalReplaySummary(
+        periods=len(paths),
+        horizon_years=years,
+        success_rate=successes / len(paths),
+        median_ending_corpus=median(ending_values),
+        ending_corpus_p5=_percentile(ending_values, 5),
+        ending_corpus_p10=_percentile(ending_values, 10),
+        ending_corpus_p90=_percentile(ending_values, 90),
+        earliest_failure_year=min(failures) if failures else None,
+        median_failure_year=median(failures) if failures else None,
+        worst_start_year=worst_start_year,
+        worst_ending_corpus=worst_path.ending_corpus,
+        paths=tuple(paths),
+    )
