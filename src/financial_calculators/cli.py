@@ -7,6 +7,7 @@ from financial_calculators.inflation import (
     adjusted_value_after_inflation,
     future_cost_after_inflation,
 )
+from financial_calculators.retirement import simulate_monte_carlo_retirement
 
 
 def _money(value: float, currency: str) -> str:
@@ -26,6 +27,22 @@ def _add_corpus_command(parser: ArgumentParser) -> None:
     parser.add_argument("--return-rate", type=float, default=8)
     parser.add_argument("--inflation", type=float, default=5)
     parser.add_argument("--max-years", type=int, default=100)
+    parser.add_argument("--currency", default="₹")
+
+
+def _add_retire_command(parser: ArgumentParser) -> None:
+    parser.add_argument("--mode", choices=["monte-carlo"], default="monte-carlo")
+    parser.add_argument("--corpus", type=float, default=20_000_000)
+    parser.add_argument("--annual-expense", type=float, default=1_200_000)
+    parser.add_argument("--years", type=int, default=35)
+    parser.add_argument("--simulations", type=int, default=10_000)
+    parser.add_argument("--return-mean", type=float, default=8)
+    parser.add_argument("--return-volatility", type=float, default=15)
+    parser.add_argument("--inflation-mean", type=float, default=5)
+    parser.add_argument("--inflation-volatility", type=float, default=2)
+    parser.add_argument("--crash-probability", type=float, default=5)
+    parser.add_argument("--crash-impact", type=float, default=-30)
+    parser.add_argument("--seed", type=int)
     parser.add_argument("--currency", default="₹")
 
 
@@ -77,6 +94,39 @@ def run_corpus(args: Namespace) -> int:
     return 0
 
 
+def run_retire(args: Namespace) -> int:
+    summary = simulate_monte_carlo_retirement(
+        initial_corpus=args.corpus,
+        annual_expense=args.annual_expense,
+        years=args.years,
+        simulations=args.simulations,
+        return_mean=args.return_mean / 100,
+        return_volatility=args.return_volatility / 100,
+        inflation_mean=args.inflation_mean / 100,
+        inflation_volatility=args.inflation_volatility / 100,
+        crash_probability=args.crash_probability / 100,
+        crash_impact=args.crash_impact / 100,
+        seed=args.seed,
+    )
+
+    print("Monte Carlo retirement simulation")
+    print(f"Simulations: {summary.simulations:,}")
+    print(f"Horizon: {summary.horizon_years} years")
+    print(f"Initial corpus: {_money(args.corpus, args.currency)}")
+    print(f"Annual expense: {_money(args.annual_expense, args.currency)}")
+    print(f"Success rate: {summary.success_rate * 100:.1f}%")
+    print(f"Median ending corpus: {_money(summary.median_ending_corpus, args.currency)}")
+    print(f"5th percentile ending corpus: {_money(summary.ending_corpus_p5, args.currency)}")
+    print(f"10th percentile ending corpus: {_money(summary.ending_corpus_p10, args.currency)}")
+    print(f"90th percentile ending corpus: {_money(summary.ending_corpus_p90, args.currency)}")
+    if summary.earliest_failure_year is None:
+        print("No simulated path exhausted the corpus.")
+    else:
+        print(f"Earliest failure year: {summary.earliest_failure_year}")
+        print(f"Median failure year: {summary.median_failure_year:g}")
+    return 0
+
+
 def build_parser() -> ArgumentParser:
     parser = ArgumentParser(
         prog="fincalc",
@@ -98,6 +148,13 @@ def build_parser() -> ArgumentParser:
     _add_corpus_command(corpus_parser)
     corpus_parser.set_defaults(func=run_corpus)
 
+    retire_parser = subparsers.add_parser(
+        "retire",
+        help="Run retirement planning simulations.",
+    )
+    _add_retire_command(retire_parser)
+    retire_parser.set_defaults(func=run_retire)
+
     return parser
 
 
@@ -109,4 +166,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
