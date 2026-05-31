@@ -17,6 +17,8 @@ This project is being built around that idea.
 - Estimates how long a retirement corpus lasts with fixed return and inflation.
 - Replays retirement plans against year-by-year historical return and inflation
   data from CSV files.
+- Includes an India-specific annual dataset built from NIFTY 50 Total Returns
+  Index returns and India CPI inflation.
 - Runs Monte Carlo retirement simulations with configurable return volatility,
   inflation volatility, crash probability, crash impact, and deterministic
   random seeds.
@@ -162,6 +164,52 @@ Earliest failure year: 13
 Median failure year: 13.5
 ```
 
+### India Historical Replay
+
+The repo includes an India-specific annual dataset at
+`data/india/nifty50_tri_cpi_annual.csv`.
+
+It combines:
+
+- NIFTY 50 Total Returns Index annual returns from NSE Indices.
+- India annual CPI inflation from the World Bank indicator `FP.CPI.TOTL.ZG`.
+
+Regenerate it with:
+
+```bash
+python3 tools/build_india_history.py
+```
+
+Run a replay:
+
+```bash
+.venv/bin/fincalc retire \
+  --mode historical \
+  --history-csv data/india/nifty50_tri_cpi_annual.csv \
+  --corpus 20000000 \
+  --annual-expense 1200000 \
+  --years 15
+```
+
+Example output:
+
+```text
+Historical retirement replay
+Periods tested: 11
+Horizon: 15 years
+Initial corpus: ₹20,000,000.00
+Annual expense: ₹1,200,000.00
+Success rate: 90.9%
+Worst start year: 2008
+Worst ending corpus: ₹-1,433,561.04
+Median ending corpus: ₹65,996,655.92
+5th percentile ending corpus: ₹7,593,067.76
+10th percentile ending corpus: ₹16,619,696.56
+90th percentile ending corpus: ₹116,177,073.90
+Earliest failure year: 12
+Median failure year: 12
+```
+
 ## Python API
 
 ```python
@@ -252,6 +300,7 @@ Legacy interactive calculator scripts live in `tools/`:
 ```bash
 python3 tools/fvm.py
 python3 tools/corpus_runtime.py
+python3 tools/build_india_history.py
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
