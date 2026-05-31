@@ -1,31 +1,28 @@
-# Calculate future value of money.
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
+from financial_calculators.inflation import adjusted_value_after_inflation
+
+
 def calculate_fvm(present_value, annual_rate, years):
-    """
-    Calculate Future Value of Money (FVM)
-    :param present_value: Current value (float or int)
-    :param annual_rate: Annual interest or inflation rate (as decimal, e.g., 0.06 for 6%)
-    :param years: Time period in years
-    :return: Future value
-    """
-    #fvm = present_value * (1 - annual_rate) ** years
-    # Future value is adjusted for inflation; value decreases as inflation erodes purchasing power over time
-    fvm = present_value / ((1 + annual_rate) ** years)
-    return fvm
+    """Backward-compatible wrapper for inflation-adjusted purchasing power."""
+    return adjusted_value_after_inflation(present_value, annual_rate, years)
 
-# Example input
-# Present Value
-pv = float(input("Enter Present Value (e.g., 20000000 for ₹2Cr): ").strip() or 20000000)
 
-#Annual Inflation Rate
-air = float(input("Enter avg annual inflation rate (e.g., 6 for 6%): ").strip() or 6)
+def main():
+    pv = float(input("Enter present value (e.g., 20000000 for ₹2Cr): ").strip() or 20000000)
+    air = float(input("Enter avg annual inflation rate (e.g., 6 for 6%): ").strip() or 6)
+    years = float(input("Enter number of years after which value is calculated: ").strip() or 20)
 
-# Time period
-years = float(input("Enter number of years after which future value is calculated: ").strip() or 20)
+    print(f"Present Value {pv}, Annual inflation rate {air}%/yr, time period {years} years")
 
-print(f"Present Value {pv}, Annual inflation rate {air}%/yr, time period {years} years")
+    air = air / 100
 
-air = air / 100
+    fvm = calculate_fvm(pv, air, years)
+    print(f"Purchasing power after {years:g} years: ₹{fvm:,.2f}")
 
-fvm = calculate_fvm(pv, air, years)
-print(f"Future Value after {years} years: ₹{fvm:,.2f}")
 
+if __name__ == "__main__":
+    main()
