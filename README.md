@@ -1,4 +1,4 @@
-# Financial Calculators
+# Retirement Reality Planner
 
 Personal finance calculators and retirement planning simulations that avoid
 overly smooth, rosy projections.
